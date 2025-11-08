@@ -1,31 +1,90 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 app = Flask(__name__)
 
+def generate_sample_data():
+    """Generate sample portfolio data for testing"""
+    isins = ['ISIN001', 'ISIN002', 'ISIN003']
+    start_date = datetime(2023, 1, 1)
+    periods = 24  # 24 months
+    
+    data = {
+        'registrosPorISIN': {},
+        'pesosCartera': {
+            'ISIN001': 0.40,
+            'ISIN002': 0.35,
+            'ISIN003': 0.25
+        }
+    }
+    
+    for isin in isins:
+        records = []
+        for i in range(periods):
+            date = start_date + timedelta(days=30*i)
+            # Generate random monthly returns
+            value = np.random.normal(0.5, 2.0)
+            records.append({
+                'date': date.isoformat(),
+                'value': f"{value:.2f}%",
+                'valueNumerico': value,
+                'ISIN': isin
+            })
+        data['registrosPorISIN'][isin] = records
+    
+    return data
+
 @app.route('/')
 def index():
     """Main dashboard route"""
-    return render_template('dashboard.html')
+    # Check if data is provided via query params (from N8N)
+    data_param = request.args.get('data')
+    
+    if data_param:
+        try:
+            data = json.loads(data_param)
+        except:
+            data = generate_sample_data()
+    else:
+        # Use sample data for testing
+        data = generate_sample_data()
+    
+    return render_template('dashboard.html', data=data)
+
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    """Dashboard route that accepts POST data from N8N"""
+    if request.method == 'POST':
+        data = request.get_json()
+        if not data:
+            data = generate_sample_data()
+    else:
+        data = generate_sample_data()
+    
+    return render_template('dashboard.html', data=data)
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'dashboard-backend'
+    })
 
 @app.route('/api/process-data', methods=['POST'])
 def process_data():
-    """Process portfolio data and return statistics"""
+    """API endpoint to process portfolio data"""
     try:
         data = request.get_json()
         
         if not data or 'registrosPorISIN' not in data:
             return jsonify({'error': 'Invalid data format'}), 400
         
-        # Process data
+        # Process data with pandas
         processed = process_portfolio_data(
             data['registrosPorISIN'],
             data.get('pesosCartera', {})
@@ -42,7 +101,6 @@ def process_portfolio_data(records_by_isin, portfolio_weights):
     results = {}
     isins = list(records_by_isin.keys())
     
-    # Process each ISIN
     for isin, records in records_by_isin.items():
         if not records:
             continue
