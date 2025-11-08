@@ -14,6 +14,7 @@ import {
 import { drawLineChart } from './charts/line-chart.js';
 import { createVolatilityScatterPlot, createSharpeScatterPlot } from './charts/scatter-chart.js';
 import { updateSummaryTable, setupTableSorting } from './summary-table.js';
+import { createCorrelationMatrix } from './charts/correlation-chart.js';
 
 // Global variables
 window.dashboardIsins = [];
