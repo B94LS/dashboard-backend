@@ -107,6 +107,9 @@ function renderAllCharts() {
   // Render scatter plots
   createVolatilityScatterPlot('#scatter-plot');
   createSharpeScatterPlot('#sharpe-plot');
+  
+  // Render correlation matrix
+  createCorrelationMatrix('#correlation-plot');
 }
 
 function setupEventListeners() {
